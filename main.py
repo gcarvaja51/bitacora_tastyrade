@@ -31,7 +31,7 @@ REPORT_HOUR_ET      = int(os.environ.get("REPORT_HOUR_ET", "16"))
 REPORT_MINUTE_ET    = int(os.environ.get("REPORT_MINUTE_ET", "15"))
 SANDBOX             = os.environ.get("TASTYTRADE_SANDBOX", "false").lower() == "true"
 
-BASE_URL = "https://api.cert.tastyworks.com" if SANDBOX else "https://api.tastyworks.com"
+BASE_URL = "https://api.cert.tastytrade.com" if SANDBOX else "https://api.tastytrade.com"
 
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
