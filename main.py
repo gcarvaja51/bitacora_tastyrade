@@ -264,3 +264,44 @@ if __name__ == "__main__":
     threading.Thread(target=run_scheduler, daemon=True).start()
     log.info("Escuchando comandos de Telegram...")
     bot.infinity_polling()
+
+from datetime import timedelta
+from collections import defaultdict
+
+def get_period_metrics(days_back, label):
+    try:
+        token = get_access_token()
+        accounts = get_accounts(token)
+        acct = ACCOUNT_NUMBER or accounts[0]["account"]["account-number"]
+        et = pytz.timezone("US/Eastern")
+        today = datetime.now(et).date()
+        start = today - timedelta(days=days_back)
+        txns = get_transactions(token, acct, start.isoformat())
+        positions = get_positions(token, acct)
+        daily = defaultdict(list)
+        commissions_total = 0.0
+        fees_total = 0.0
+        for t in txns:
+            d = t.get("executed-at", "")[:10]
+            t_type = t.get("transaction-type", "")
+            value = float(t.get("net-value", 0))
+            if t_type == "Trade":
+                daily[d].append({"symbol": t.get("underlying-symbol","?"), "value": value})
+            elif t_type == "Commission":
+                commissions_total += abs(value)
+            elif "fee" in t_type.lower():
+                fees_total += abs(value)
+        all_trades = [t for trades in daily.values() for t in trades]
+        pnl_gross = sum(t["value"] for t in all_trades)
+        total_costs = commissions_total + fees_total
+        pnl_net = pnl_gross - total_costs
+        wins = [t for t in all_trades if t["value"] > 0]
+        losses = [t for t in all_trades if t["value"] <= 0]
+        win_rate = len(wins)/len(all_trades)*100 if all_trades else 0
+        daily_pnl = {d: sum(t["value"] for t in trades) for d, trades in daily.items()}
+        best_day = max(daily_pnl.items(), key=lambda x: x[1]) if daily_pnl else None
+        worst_day = min(daily_pnl.items(), key=lambda x: x[1]) if daily_pnl else None
+        sym_pnl = defaultdict(float)
+        for t in all_trades:
+            sym_pnl[t["symbol"]] += t["value"]
+        top =
