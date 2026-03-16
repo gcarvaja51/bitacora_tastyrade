@@ -357,13 +357,23 @@ def get_period_metrics(days_back: int, label: str) -> str:
 
 @bot.message_handler(commands=["dia", "hoy"])
 def cmd_dia(msg):
-    bot.reply_to(msg, "⏳ Generando informe del día...")
-    bot.reply_to(msg, get_period_metrics(1, "Hoy"), parse_mode="Markdown")
+    try:
+        bot.reply_to(msg, "⏳ Generando informe del día...")
+        result = get_period_metrics(1, "Hoy")
+        bot.reply_to(msg, result, parse_mode="Markdown")
+    except Exception as e:
+        bot.reply_to(msg, f"❌ Error en /dia: {str(e)}")
 
 @bot.message_handler(commands=["semana"])
-def cmd_semana(msg):
-    bot.reply_to(msg, "⏳ Generando informe semanal...")
-    bot.reply_to(msg, get_period_metrics(7, "Últimos 7 días"), parse_mode="Markdown")
+def cmd_semana_debug(msg):
+    try:
+        bot.reply_to(msg, "⏳ Generando informe semanal...")
+        result = get_period_metrics(7, "Últimos 7 días")
+        bot.reply_to(msg, result, parse_mode="Markdown")
+    except Exception as e:
+        bot.reply_to(msg, f"❌ Error en /semana: {str(e)}")
+
+
 
 @bot.message_handler(commands=["mes"])
 def cmd_mes(msg):
