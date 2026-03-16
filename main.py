@@ -264,6 +264,7 @@ if __name__ == "__main__":
     threading.Thread(target=run_scheduler, daemon=True).start()
     log.info("Escuchando comandos de Telegram...")
     bot.infinity_polling()
+    print("bot iniciado")
 
 from datetime import timedelta
 from collections import defaultdict
