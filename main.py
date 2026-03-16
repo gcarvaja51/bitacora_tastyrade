@@ -45,8 +45,12 @@ def get_access_token() -> str:
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=15
     )
+    if not resp.ok:
+        log.error(f"OAuth error {resp.status_code}: {resp.text}")
     resp.raise_for_status()
-    token = resp.json()["access_token"]
+    data = resp.json()
+    log.info(f"OAuth response keys: {list(data.keys())}")
+    token = data.get("access_token") or data.get("session-token") or str(data)
     log.info("Token OAuth obtenido correctamente.")
     return token
 
