@@ -190,8 +190,12 @@ def send_report():
 def cmd_start(msg):
     bot.reply_to(msg, (
         "📒 *Bitácora Tastytrade activa*\n\n"
-        "/informe — Generar informe ahora\n"
-        "/posiciones — Ver posiciones abiertas\n"
+        "/informe — Informe del día\n"
+        "/dia — Resumen de hoy\n"
+        "/semana — Últimos 7 días\n"
+        "/mes — Últimos 30 días\n"
+        "/historico — Últimos 90 días\n"
+        "/posiciones — Posiciones abiertas\n"
         "/status — Estado del bot"
     ), parse_mode="Markdown")
 
