@@ -37,12 +37,12 @@ bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 def get_access_token() -> str:
     resp = requests.post(
         f"{BASE_URL}/oauth/token",
-        json={
+        data={
             "grant_type":    "refresh_token",
             "refresh_token": TASTYTRADE_REFRESH_TOKEN,
             "client_secret": TASTYTRADE_CLIENT_SECRET,
         },
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=15
     )
     resp.raise_for_status()
