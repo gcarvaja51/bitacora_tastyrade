@@ -6,7 +6,8 @@ Autenticación via OAuth2
 
 import os
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from collections import defaultdict
 import pytz
 import schedule
 import time
@@ -279,7 +280,6 @@ def get_period_metrics(days_back: int, label: str) -> str:
         positions = get_positions(token, acct)
 
         # Agrupar por día
-        from collections import defaultdict
         daily = defaultdict(list)
         commissions_total = 0.0
         fees_total        = 0.0
