@@ -334,3 +334,15 @@ def cmd_mes(msg):
 def cmd_historico(msg):
     bot.reply_to(msg, get_period_metrics(90, "90 dias"))
 
+if __name__ == "__main__":
+    log.info("Bitacora Tastytrade iniciando...")
+    try:
+        bot.send_message(TELEGRAM_CHAT_ID,
+            "Bitacora Tastytrade iniciada. El informe automatico llegara cada dia habil al cierre del mercado.",
+            parse_mode="Markdown")
+    except Exception as e:
+        log.warning(f"No se pudo enviar mensaje de arranque: {e}")
+
+    threading.Thread(target=run_scheduler, daemon=True).start()
+    log.info("Escuchando comandos de Telegram...")
+    bot.infinity_polling()
