@@ -321,8 +321,7 @@ def get_period_metrics(days_back, label):
 
 @bot.message_handler(commands=["dia","hoy"])
 def cmd_dia(msg):
-    bot.reply_to(msg, get_period_metrics(1, "Hoy"))
-
+    bot.reply_to(msg, "test dia funcionando")
 @bot.message_handler(commands=["semana"])
 def cmd_semana(msg):
     bot.reply_to(msg, get_period_metrics(7, "7 dias"))
