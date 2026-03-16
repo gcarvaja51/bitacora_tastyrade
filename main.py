@@ -264,7 +264,6 @@ if __name__ == "__main__":
     threading.Thread(target=run_scheduler, daemon=True).start()
     log.info("Escuchando comandos de Telegram...")
     bot.infinity_polling()
-    print("bot iniciado")
 
 from datetime import timedelta
 from collections import defaultdict
@@ -299,10 +298,40 @@ def get_period_metrics(days_back, label):
         wins = [t for t in all_trades if t["value"] > 0]
         losses = [t for t in all_trades if t["value"] <= 0]
         win_rate = len(wins)/len(all_trades)*100 if all_trades else 0
-        daily_pnl = {d: sum(t["value"] for t in trades) for d, trades in daily.items()}
-        best_day = max(daily_pnl.items(), key=lambda x: x[1]) if daily_pnl else None
-        worst_day = min(daily_pnl.items(), key=lambda x: x[1]) if daily_pnl else None
         sym_pnl = defaultdict(float)
         for t in all_trades:
             sym_pnl[t["symbol"]] += t["value"]
-        top =
+        top = sorted(sym_pnl.items(), key=lambda x: x[1], reverse=True)[:5]
+        lines = [
+            f"Bitacora Tastytrade - {label}",
+            f"Cuenta: {acct}",
+            f"PnL neto: {fmt(pnl_net)}",
+            f"PnL bruto: {fmt(pnl_gross)}",
+            f"Comisiones: -${total_costs:.2f}",
+            f"Trades: {len(all_trades)} en {len(daily)} dias",
+            f"Win rate: {win_rate:.0f}% ({len(wins)}W/{len(losses)}L)",
+        ]
+        if top:
+            for sym, pnl in top:
+                lines.append(f"{sym}: {fmt(pnl)}")
+        lines.append(f"Posiciones abiertas: {len(positions)}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@bot.message_handler(commands=["dia","hoy"])
+def cmd_dia(msg):
+    bot.reply_to(msg, get_period_metrics(1, "Hoy"))
+
+@bot.message_handler(commands=["semana"])
+def cmd_semana(msg):
+    bot.reply_to(msg, get_period_metrics(7, "7 dias"))
+
+@bot.message_handler(commands=["mes"])
+def cmd_mes(msg):
+    bot.reply_to(msg, get_period_metrics(30, "30 dias"))
+
+@bot.message_handler(commands=["historico"])
+def cmd_historico(msg):
+    bot.reply_to(msg, get_period_metrics(90, "90 dias"))
+
