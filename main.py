@@ -258,3 +258,115 @@ if __name__ == "__main__":
     threading.Thread(target=run_scheduler, daemon=True).start()
     log.info("Escuchando comandos de Telegram...")
     bot.infinity_polling()
+
+# ─── Helpers de período ─────────────────────────────────────────────────────
+
+from datetime import timedelta
+
+def get_period_metrics(days_back: int, label: str) -> str:
+    try:
+        token     = get_access_token()
+        accounts  = get_accounts(token)
+        acct      = ACCOUNT_NUMBER or accounts[0]["account"]["account-number"]
+        et        = pytz.timezone("US/Eastern")
+        today     = datetime.now(et).date()
+        start     = today - timedelta(days=days_back)
+        txns      = get_transactions(token, acct, start.isoformat())
+        positions = get_positions(token, acct)
+
+        # Agrupar por día
+        from collections import defaultdict
+        daily = defaultdict(list)
+        commissions_total = 0.0
+        fees_total        = 0.0
+
+        for t in txns:
+            d      = t.get("executed-at", "")[:10]
+            t_type = t.get("transaction-type", "")
+            value  = float(t.get("net-value", 0))
+            if t_type == "Trade":
+                daily[d].append({"symbol": t.get("underlying-symbol","?"), "value": value})
+            elif t_type == "Commission":
+                commissions_total += abs(value)
+            elif "fee" in t_type.lower():
+                fees_total += abs(value)
+
+        all_trades = [t for trades in daily.values() for t in trades]
+        pnl_gross  = sum(t["value"] for t in all_trades)
+        total_costs= commissions_total + fees_total
+        pnl_net    = pnl_gross - total_costs
+        wins       = [t for t in all_trades if t["value"] > 0]
+        losses     = [t for t in all_trades if t["value"] <= 0]
+        win_rate   = len(wins)/len(all_trades)*100 if all_trades else 0
+
+        # Mejor y peor día
+        daily_pnl  = {d: sum(t["value"] for t in trades) for d, trades in daily.items()}
+        best_day   = max(daily_pnl.items(), key=lambda x: x[1]) if daily_pnl else None
+        worst_day  = min(daily_pnl.items(), key=lambda x: x[1]) if daily_pnl else None
+
+        lines = [
+            f"📒 *Bitácora Tastytrade · {label}*",
+            f"📅 `{start.strftime('%d %b')}` → `{today.strftime('%d %b %Y')}`",
+            f"🏦 Cuenta: `{acct}`",
+            "─" * 30,
+            f"{emoji(pnl_net)} *P&L neto:*     `{fmt(pnl_net)}`",
+            f"   P&L bruto:   `{fmt(pnl_gross)}`",
+            f"   Comisiones:  `-${total_costs:.2f}`",
+            "",
+            f"🎯 *Trades: {len(all_trades)}* total en {len(daily)} días",
+            f"   Win rate:    `{win_rate:.0f}%` ({len(wins)}W / {len(losses)}L)",
+        ]
+
+        if wins:
+            lines.append(f"   Avg ganador: `{fmt(sum(t['value'] for t in wins)/len(wins))}`")
+        if losses:
+            lines.append(f"   Avg perdedor:`{fmt(sum(t['value'] for t in losses)/len(losses))}`")
+
+        if best_day:
+            lines.append(f"\n📈 Mejor día:  `{best_day[0]}` → `{fmt(best_day[1])}`")
+        if worst_day and worst_day[0] != best_day[0]:
+            lines.append(f"📉 Peor día:   `{worst_day[0]}` → `{fmt(worst_day[1])}`")
+
+        # Top 5 símbolos
+        from collections import Counter
+        sym_pnl = defaultdict(float)
+        for t in all_trades:
+            sym_pnl[t["symbol"]] += t["value"]
+        top = sorted(sym_pnl.items(), key=lambda x: x[1], reverse=True)[:5]
+        if top:
+            lines.append("\n🏆 *Top símbolos*")
+            for sym, pnl in top:
+                lines.append(f"   `{sym.ljust(6)}` {fmt(pnl)}")
+
+        lines += [
+            "",
+            f"📋 Posiciones abiertas: {len(positions)}",
+            "─" * 30,
+            f"🕓 `{datetime.now(et).strftime('%I:%M %p ET')}`"
+        ]
+        return "\n".join(lines)
+
+    except Exception as e:
+        log.error(f"Error período {label}: {e}")
+        return f"⚠️ Error generando informe {label}:\n`{str(e)}`"
+
+
+@bot.message_handler(commands=["dia", "hoy"])
+def cmd_dia(msg):
+    bot.reply_to(msg, "⏳ Generando informe del día...")
+    bot.reply_to(msg, get_period_metrics(1, "Hoy"), parse_mode="Markdown")
+
+@bot.message_handler(commands=["semana"])
+def cmd_semana(msg):
+    bot.reply_to(msg, "⏳ Generando informe semanal...")
+    bot.reply_to(msg, get_period_metrics(7, "Últimos 7 días"), parse_mode="Markdown")
+
+@bot.message_handler(commands=["mes"])
+def cmd_mes(msg):
+    bot.reply_to(msg, "⏳ Generando informe mensual...")
+    bot.reply_to(msg, get_period_metrics(30, "Últimos 30 días"), parse_mode="Markdown")
+
+@bot.message_handler(commands=["historico"])
+def cmd_historico(msg):
+    bot.reply_to(msg, "⏳ Generando histórico (90 días)... puede tomar unos segundos.")
+    bot.reply_to(msg, get_period_metrics(90, "Últimos 90 días"), parse_mode="Markdown")
